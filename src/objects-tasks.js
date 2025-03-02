@@ -36,13 +36,14 @@ function shallowCopy(obj) {
  *    mergeObjects([]) => {}
  */
 function mergeObjects(objects) {
-  const result = {};
+  const sums = new Map();
+
   objects.forEach((obj) => {
-    Object.keys(obj).forEach((key) => {
-      result[key] = (result[key] || 0) + obj[key];
+    Object.entries(obj).forEach(([key, value]) => {
+      sums.set(key, (sums.get(key) || 0) + value);
     });
   });
-  return result;
+  return Object.fromEntries(sums);
 }
 
 /**
