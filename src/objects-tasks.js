@@ -87,7 +87,7 @@ function compareObjects(obj1, obj2) {
     return false;
   }
 
-  for (let i = 1; i < keys1.length; i += 1) {
+  for (let i = 0; i < keys1.length; i += 1) {
     const key = keys1[i];
     if (obj1[key] !== obj2[key]) {
       return false;
@@ -375,33 +375,115 @@ function group(array, keySelector, valueSelector) {
  *  For more examples see unit tests.
  */
 
+class Selector {
+  constructor() {
+    this.elementValue = '';
+    this.idValue = '';
+    this.classes = [];
+    this.attributes = [];
+    this.pseudoClasses = [];
+    this.pseudoElement = '';
+    this.combination = null;
+  }
+
+  element(value) {
+    const newSelector = new Selector();
+    Object.assign(newSelector, this);
+    newSelector.elementValue = value;
+    return newSelector;
+  }
+
+  id(value) {
+    const newSelector = new Selector();
+    Object.assign(newSelector, this);
+    newSelector.idValue = `#${value}`;
+    return newSelector;
+  }
+
+  class(value) {
+    const newSelector = new Selector();
+    Object.assign(newSelector, this);
+    newSelector.classes = [...this.classes, value];
+    return newSelector;
+  }
+
+  attr(value) {
+    const newSelector = new Selector();
+    Object.assign(newSelector, this);
+    newSelector.attributes = [...this.attributes, `[${value}]`];
+    return newSelector;
+  }
+
+  pseudoClass(value) {
+    const newSelector = new Selector();
+    Object.assign(newSelector, this);
+    newSelector.pseudoClasses = [...this.pseudoClasses, value];
+    return newSelector;
+  }
+
+  pseudoElement(value) {
+    const newSelector = new Selector();
+    Object.assign(newSelector, this);
+    newSelector.pseudoElement = `::${value}`;
+    return newSelector;
+  }
+
+  // combine(selector1, combinator, selector2) {
+  //   const newSelector = new Selector();
+  //   newSelector.combination = { selector1, combinator, selector2 };
+  //   return newSelector;
+  // }
+
+  combine(selector1, combinator, selector2) {
+    this.combination = { selector1, combinator, selector2 };
+    return this;
+  }
+
+  stringify() {
+    if (this.combination) {
+      const { selector1, combinator, selector2 } = this.combination;
+      return `${selector1.stringify()} ${combinator} ${selector2.stringify()}`.trim();
+    }
+    const parts = [
+      this.elementValue,
+      this.idValue,
+      this.classes.map((cls) => `.${cls}`).join(''),
+      this.attributes.join(''),
+      this.pseudoClasses.map((pc) => `:${pc}`).join(''),
+      this.pseudoElement,
+    ];
+
+    return parts.join('').trim();
+  }
+}
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    return new Selector().element(value);
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return new Selector().id(value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return new Selector().class(value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return new Selector().attr(value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return new Selector().pseudoClass(value);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    return new Selector().pseudoElement(value);
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return new Selector().combine(selector1, combinator, selector2);
   },
 };
 
