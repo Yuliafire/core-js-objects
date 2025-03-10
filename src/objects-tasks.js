@@ -18,10 +18,8 @@
  *    shallowCopy({}) => {}
  */
 function shallowCopy(obj) {
-  if (typeof obj !== 'object' || obj === null) {
-    throw new Error('invalid input');
-  }
-  return { ...obj };
+  const copy = {};
+  return Object.assign(copy, obj);
 }
 
 /**
@@ -374,86 +372,110 @@ function group(array, keySelector, valueSelector) {
  *
  *  For more examples see unit tests.
  */
-
 class Selector {
   constructor() {
-    this.elementValue = '';
-    this.idValue = '';
-    this.classes = [];
-    this.attributes = [];
-    this.pseudoClasses = [];
-    this.pseudoElement = '';
-    this.combination = null;
+    this.selector = {
+      element: '',
+      id: '',
+      classes: [],
+      attributes: [],
+      pseudoClasses: [],
+      pseudoElement: '',
+    };
+    this.combinedSelectors = [];
+    this.order = [];
+  }
+
+  checkOrder(type) {
+    const orderMap = {
+      element: 1,
+      id: 2,
+      class: 3,
+      attribute: 4,
+      pseudoClass: 5,
+      pseudoElement: 6,
+    };
+
+    if (
+      this.order.length &&
+      orderMap[type] < orderMap[this.order[this.order.length - 1]]
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    if (
+      (type === 'element' && this.selector.element) ||
+      (type === 'id' && this.selector.id) ||
+      (type === 'pseudoElement' && this.selector.pseudoElement)
+    ) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+
+    this.order.push(type);
   }
 
   element(value) {
-    const newSelector = new Selector();
-    Object.assign(newSelector, this);
-    newSelector.elementValue = value;
-    return newSelector;
+    this.checkOrder('element');
+    this.selector.element = value;
+    return this;
   }
 
   id(value) {
-    const newSelector = new Selector();
-    Object.assign(newSelector, this);
-    newSelector.idValue = `#${value}`;
-    return newSelector;
+    this.checkOrder('id');
+    this.selector.id = `#${value}`;
+    return this;
   }
 
   class(value) {
-    const newSelector = new Selector();
-    Object.assign(newSelector, this);
-    newSelector.classes = [...this.classes, value];
-    return newSelector;
+    this.checkOrder('class');
+    this.selector.classes.push(`.${value}`);
+    return this;
   }
 
   attr(value) {
-    const newSelector = new Selector();
-    Object.assign(newSelector, this);
-    newSelector.attributes = [...this.attributes, `[${value}]`];
-    return newSelector;
+    this.checkOrder('attribute');
+    this.selector.attributes.push(`[${value}]`);
+    return this;
   }
 
   pseudoClass(value) {
-    const newSelector = new Selector();
-    Object.assign(newSelector, this);
-    newSelector.pseudoClasses = [...this.pseudoClasses, value];
-    return newSelector;
+    this.checkOrder('pseudoClass');
+    this.selector.pseudoClasses.push(`:${value}`);
+    return this;
   }
 
   pseudoElement(value) {
-    const newSelector = new Selector();
-    Object.assign(newSelector, this);
-    newSelector.pseudoElement = `::${value}`;
-    return newSelector;
-  }
-
-  // combine(selector1, combinator, selector2) {
-  //   const newSelector = new Selector();
-  //   newSelector.combination = { selector1, combinator, selector2 };
-  //   return newSelector;
-  // }
-
-  combine(selector1, combinator, selector2) {
-    this.combination = { selector1, combinator, selector2 };
+    this.checkOrder('pseudoElement');
+    this.selector.pseudoElement = `::${value}`;
     return this;
   }
 
   stringify() {
-    if (this.combination) {
-      const { selector1, combinator, selector2 } = this.combination;
-      return `${selector1.stringify()} ${combinator} ${selector2.stringify()}`.trim();
+    if (this.combinedSelectors.length) {
+      return this.combinedSelectors.join(' ');
     }
-    const parts = [
-      this.elementValue,
-      this.idValue,
-      this.classes.map((cls) => `.${cls}`).join(''),
-      this.attributes.join(''),
-      this.pseudoClasses.map((pc) => `:${pc}`).join(''),
-      this.pseudoElement,
-    ];
 
-    return parts.join('').trim();
+    return (
+      this.selector.element +
+      this.selector.id +
+      this.selector.classes.join('') +
+      this.selector.attributes.join('') +
+      this.selector.pseudoClasses.join('') +
+      this.selector.pseudoElement
+    );
+  }
+
+  static combine(selector1, combinator, selector2) {
+    const newSelector = new Selector();
+    newSelector.combinedSelectors = [
+      selector1.stringify(),
+      combinator,
+      selector2.stringify(),
+    ];
+    return newSelector;
   }
 }
 
@@ -483,7 +505,7 @@ const cssSelectorBuilder = {
   },
 
   combine(selector1, combinator, selector2) {
-    return new Selector().combine(selector1, combinator, selector2);
+    return Selector.combine(selector1, combinator, selector2);
   },
 };
 
